@@ -58,7 +58,6 @@
             transform: scale(1.1);
         }
         
-        /* Blur only applies when exam is locked AND not yet submitted (Paused state or Start state) */
         body.exam-locked:not(.exam-submitted) main, 
         body.exam-locked:not(.exam-submitted) footer {
             filter: blur(8px);
@@ -67,37 +66,32 @@
         }
 
         #results-overlay {
-            z-index: 200; /* Higher than header and scratchpad */
+            z-index: 200;
         }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans pb-32 exam-locked">
 
-    <!-- Start Exam Overlay -->
     <div id="exam-gatekeeper" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-6 text-center z-[100]">
         <div class="bg-white p-8 rounded-2xl max-w-md shadow-2xl border-t-8 border-blue-600">
             <h2 class="text-3xl font-black text-slate-800 mb-4">Algebra 2 Mid-Term</h2>
-            <p class="text-slate-600 mb-8 leading-relaxed">60 Questions. 60 Minutes. Use the pencil tool for scratch work. Each question is worth 1 point.</p>
-            <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg">
+            <p class="text-slate-600 mb-8 leading-relaxed">60 Questions. 60 Minutes. Use the tools for scratch work. Good luck!</p>
+            <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition-transform active:scale-95">
                 Begin Exam
             </button>
         </div>
     </div>
 
-    <!-- Results Container -->
     <div id="results-overlay" class="fixed inset-0 bg-slate-900/95 hidden flex items-center justify-center p-4 overflow-y-auto">
         <div id="results-content" class="w-full max-w-2xl my-auto"></div>
     </div>
 
-    <!-- Modal Overlay -->
     <div id="modal-overlay" class="fixed inset-0 bg-slate-900/60 hidden z-[150] flex items-center justify-center p-4">
         <div id="modal-content" class="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl"></div>
     </div>
 
-    <!-- Scratchpad Canvas -->
     <canvas id="scratch-pad"></canvas>
 
-    <!-- Header -->
     <header class="sticky top-0 bg-white/90 border-b shadow-sm z-50 px-4 py-3 backdrop-blur-md">
         <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
@@ -110,22 +104,16 @@
             
             <div class="flex items-center gap-4">
                 <div class="flex items-center bg-slate-100 rounded-lg p-1 gap-1 border">
-                    <button onclick="setTool('cursor')" id="btn-cursor" class="tool-btn active p-1.5 rounded" title="Cursor Tool">🖱️</button>
-                    <button onclick="setTool('pen')" id="btn-pen" class="tool-btn p-1.5 rounded" title="Pencil">🖋️</button>
-                    <button onclick="setTool('marker')" id="btn-marker" class="tool-btn p-1.5 rounded" title="Marker">🖍️</button>
-                    
+                    <button onclick="setTool('cursor')" id="btn-cursor" class="tool-btn active p-1.5 rounded">🖱️</button>
+                    <button onclick="setTool('pen')" id="btn-pen" class="tool-btn p-1.5 rounded">🖋️</button>
+                    <button onclick="setTool('marker')" id="btn-marker" class="tool-btn p-1.5 rounded">🖍️</button>
                     <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                    
                     <button onclick="setColor('#2563eb')" class="color-swatch active w-5 h-5 rounded-full bg-blue-600" id="color-blue"></button>
                     <button onclick="setColor('#ef4444')" class="color-swatch w-5 h-5 rounded-full bg-red-500" id="color-red"></button>
-                    <button onclick="setColor('#22c55e')" class="color-swatch w-5 h-5 rounded-full bg-green-500" id="color-green"></button>
                     <button onclick="setColor('#000000')" class="color-swatch w-5 h-5 rounded-full bg-black" id="color-black"></button>
-                    
                     <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                    
-                    <button onclick="clearScratchpad()" class="px-2 text-[10px] font-bold text-slate-500 hover:text-red-500 transition-colors">Clear All</button>
+                    <button onclick="clearScratchpad()" class="px-2 text-[10px] font-bold text-slate-500 hover:text-red-500">Clear</button>
                 </div>
-
                 <div class="flex items-center gap-4 border-l pl-4">
                     <p id="progress-text" class="text-lg font-bold text-blue-600">0/60</p>
                 </div>
@@ -137,7 +125,7 @@
 
     <footer class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-50 shadow-2xl">
         <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <p class="text-slate-500 text-xs md:text-sm">Click "Submit Exam" once all questions are completed.</p>
+            <p class="text-slate-500 text-xs">Verify all answers before submitting.</p>
             <button onclick="confirmSubmit()" id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-xl shadow-lg transition-all active:scale-95">
                 Submit Exam
             </button>
@@ -148,7 +136,7 @@
         function generateGraphSVG(type, params) {
             const size = 100;
             const center = 50;
-            const unit = 10; 
+            const unit = 8; // Adjust unit to fit -5 to 5 comfortably
             let path = "";
 
             const toPx = (x) => center + (x * unit);
@@ -156,31 +144,32 @@
 
             if (type === 'line') {
                 const { m, b } = params;
-                const x1 = -5, y1 = m * x1 + b;
-                const x2 = 5, y2 = m * x2 + b;
+                const x1 = -6, y1 = m * x1 + b;
+                const x2 = 6, y2 = m * x2 + b;
                 path = `M ${toPx(x1)} ${toPy(y1)} L ${toPx(x2)} ${toPy(y2)}`;
             } else if (type === 'parabola') {
                 const { h, k, a } = params;
-                for (let x = -5; x <= 5; x += 0.1) {
+                for (let x = -6; x <= 6; x += 0.1) {
                     const y = a * Math.pow(x - h, 2) + k;
-                    if (y >= -6 && y <= 6) { 
+                    if (y >= -10 && y <= 10) { 
                         path += (path === "" ? "M " : "L ") + `${toPx(x)} ${toPy(y)} `;
                     }
                 }
             } else if (type === 'abs') {
                 const { h, k, a } = params;
-                const xLeft = -5, yLeft = a * Math.abs(xLeft - h) + k;
-                const xVertex = h, yVertex = k;
-                const xRight = 5, yRight = a * Math.abs(xRight - h) + k;
-                path = `M ${toPx(xLeft)} ${toPy(yLeft)} L ${toPx(xVertex)} ${toPy(yVertex)} L ${toPx(xRight)} ${toPy(yRight)}`;
+                const x1 = -6, y1 = a * Math.abs(x1 - h) + k;
+                const x2 = h, y2 = k;
+                const x3 = 6, y3 = a * Math.abs(x3 - h) + k;
+                path = `M ${toPx(x1)} ${toPy(y1)} L ${toPx(x2)} ${toPy(y2)} L ${toPx(x3)} ${toPy(y3)}`;
             }
 
             return `
                 <svg viewBox="0 0 100 100" class="w-full h-full bg-white border rounded shadow-inner">
-                    ${[...Array(11).keys()].map(i => `
-                        <line x1="${i*10}" y1="0" x2="${i*10}" y2="100" class="grid-line" />
-                        <line x1="0" y1="${i*10}" x2="100" y2="${i*10}" class="grid-line" />
-                    `).join('')}
+                    ${[...Array(13).keys()].map(i => {
+                        const pos = (i - 1) * 10 - 10;
+                        return `<line x1="${i*8.3}" y1="0" x2="${i*8.3}" y2="100" class="grid-line" />
+                                <line x1="0" y1="${i*8.3}" x2="100" y2="${i*8.3}" class="grid-line" />`;
+                    }).join('')}
                     <line x1="50" y1="0" x2="50" y2="100" class="axis" />
                     <line x1="0" y1="50" x2="100" y2="50" class="axis" />
                     <path d="${path}" class="graph-curve" />
@@ -189,15 +178,76 @@
         }
 
         const questions = [
+            // 1-10: Foundations & Basics
             { id: 1, type: 'mcq', q: "Which of the following is an irrational number?", options: ["√121", "0.333...", "√20", "22/7"], correct: 2 },
             { id: 2, type: 'mcq', q: "Simplify: 3√50 - 2√8", options: ["√42", "11√2", "13√2", "7√2"], correct: 1 },
             { id: 3, type: 'mcq', q: "Solve for x: |2x - 5| = 13", options: ["{9}", "{9, -4}", "{-9, 4}", "No Solution"], correct: 1 },
-            { id: 4, type: 'mcq', q: "What is the value of i^26?", options: ["i", "-i", "1", "-1"], correct: 3 },
+            { id: 4, type: 'mcq', q: "What is the value of i²⁶?", options: ["i", "-i", "1", "-1"], correct: 3 },
             { id: 5, type: 'mcq', q: "Find the product: (3 - 2i)(4 + 5i)", options: ["12 - 10i", "22 + 7i", "2 + 7i", "22 - 7i"], correct: 1 },
+            { id: 6, type: 'mcq', q: "Which property is illustrated by a(b + c) = ab + ac?", options: ["Commutative", "Associative", "Distributive", "Identity"], correct: 2 },
+            { id: 7, type: 'mcq', q: "Simplify: (2x³y²)³", options: ["6x⁶y⁵", "8x⁶y⁵", "8x⁹y⁶", "6x⁹y⁶"], correct: 2 },
+            { id: 8, type: 'mcq', q: "Solve: 5x - 3 > 2x + 9", options: ["x > 4", "x < 4", "x > 2", "x < 2"], correct: 0 },
+            { id: 9, type: 'mcq', q: "What is the conjugate of 7 + 3i?", options: ["-7 - 3i", "7 - 3i", "3 + 7i", "-7 + 3i"], correct: 1 },
+            { id: 10, type: 'mcq', q: "Evaluate 27^(2/3)", options: ["3", "6", "9", "18"], correct: 2 },
+            
+            // 11-20: Equations & Systems
+            { id: 11, type: 'mcq', q: "Solve for x: 2(x - 4) + 3x = 7", options: ["3", "1", "15/5", "3"], correct: 0 },
+            { id: 12, type: 'mcq', q: "Solve the system: x + y = 10, x - y = 4", options: ["(7, 3)", "(6, 4)", "(8, 2)", "(5, 5)"], correct: 0 },
+            { id: 13, type: 'mcq', q: "Find the slope of a line perpendicular to y = -3x + 5", options: ["-3", "3", "1/3", "-1/3"], correct: 2 },
+            { id: 14, type: 'mcq', q: "What is the vertex of y = |x + 5| - 2?", options: ["(5, -2)", "(-5, -2)", "(-5, 2)", "(5, 2)"], correct: 1 },
+            { id: 15, type: 'mcq', q: "Find the discriminant of x² - 4x + 4 = 0", options: ["16", "0", "-16", "8"], correct: 1 },
+            { id: 16, type: 'mcq', q: "Factor completely: x² - 49", options: ["(x-7)²", "(x+7)²", "(x-7)(x+7)", "(x-49)(x+1)"], correct: 2 },
+            { id: 17, type: 'mcq', q: "Solve by factoring: x² - 5x + 6 = 0", options: ["{2, 3}", "{-2, -3}", "{1, 6}", "{-1, -6}"], correct: 0 },
+            { id: 18, type: 'mcq', q: "What is the y-intercept of 3x - 4y = 12?", options: ["3", "-3", "4", "-4"], correct: 1 },
+            { id: 19, type: 'mcq', q: "Simplify: (x + 3)(x - 5)", options: ["x² - 15", "x² + 2x - 15", "x² - 2x - 15", "x² - 8x - 15"], correct: 2 },
+            { id: 20, type: 'mcq', q: "Solve for x: √(x + 2) = 5", options: ["3", "7", "23", "27"], correct: 2 },
+
+            // 21-30: Graphing (Including your corrected ones)
             { id: 21, type: 'graph-mcq', q: "Which graph represents the linear function y = (2/3)x - 4?", graphs: [{ type: 'line', params: { m: 2/3, b: -4 } },{ type: 'line', params: { m: -2/3, b: -4 } },{ type: 'line', params: { m: 2/3, b: 4 } },{ type: 'line', params: { m: 1, b: 0 } }], correct: 0 },
             { id: 22, type: 'graph-mcq', q: "Select the graph of f(x) = (x + 3)² - 2.", graphs: [{ type: 'parabola', params: { h: 3, k: -2, a: 1 } },{ type: 'parabola', params: { h: -3, k: -2, a: 1 } },{ type: 'parabola', params: { h: -3, k: 2, a: 1 } },{ type: 'parabola', params: { h: 0, k: 0, a: 1 } }], correct: 1 },
             { id: 23, type: 'graph-mcq', q: "Identify the graph of y = |x - 2| + 1.", graphs: [{ type: 'abs', params: { h: 2, k: 1, a: 1 } },{ type: 'abs', params: { h: -2, k: 1, a: 1 } },{ type: 'abs', params: { h: 2, k: -1, a: 1 } },{ type: 'abs', params: { h: 0, k: 0, a: 1 } }], correct: 0 },
+            { id: 24, type: 'graph-mcq', q: "Which graph shows y = -x² + 3?", graphs: [{ type: 'parabola', params: { h: 0, k: 3, a: -1 } },{ type: 'parabola', params: { h: 0, k: -3, a: 1 } },{ type: 'parabola', params: { h: 3, k: 0, a: 1 } },{ type: 'parabola', params: { h: -3, k: 0, a: -1 } }], correct: 0 },
+            { id: 25, type: 'mcq', q: "The graph of y = f(x - 2) is a shift of f(x) in which direction?", options: ["Up 2", "Down 2", "Left 2", "Right 2"], correct: 3 },
+            { id: 26, type: 'mcq', q: "Identify the axis of symmetry for y = (x - 4)² + 7", options: ["x = 7", "y = 7", "x = 4", "y = 4"], correct: 2 },
+            { id: 27, type: 'mcq', q: "What is the domain of f(x) = √x?", options: ["All real numbers", "x > 0", "x ≥ 0", "x < 0"], correct: 2 },
+            { id: 28, type: 'mcq', q: "Find the midpoint of (2, 4) and (6, 10)", options: ["(4, 7)", "(8, 14)", "(2, 3)", "(4, 6)"], correct: 0 },
+            { id: 29, type: 'mcq', q: "Find the distance between (0,0) and (3,4)", options: ["7", "1", "5", "25"], correct: 2 },
+            { id: 30, type: 'mcq', q: "Which function is even?", options: ["y = x", "y = x³", "y = x²", "y = x + 1"], correct: 2 },
+
+            // 31-40: Polynomials & Factoring
+            { id: 31, type: 'mcq', q: "Factor: x³ + 8", options: ["(x+2)³", "(x+2)(x²-2x+4)", "(x-2)(x²+2x+4)", "(x+2)(x²-4)"], correct: 1 },
+            { id: 32, type: 'mcq', q: "Simplify: (x² + 5x + 6) / (x + 2)", options: ["x + 3", "x + 2", "x - 3", "x + 6"], correct: 0 },
+            { id: 33, type: 'mcq', q: "What is the remainder of (x² - 5x + 8) ÷ (x - 2)?", options: ["1", "2", "3", "4"], correct: 1 },
+            { id: 34, type: 'mcq', q: "Find the zeros of f(x) = x(x - 4)(x + 1)", options: ["{0, 4, -1}", "{4, -1}", "{0, -4, 1}", "No zeros"], correct: 0 },
+            { id: 35, type: 'mcq', q: "Expand: (2x - 1)²", options: ["4x² + 1", "4x² - 1", "4x² - 4x + 1", "4x² + 4x + 1"], correct: 2 },
+            { id: 36, type: 'mcq', q: "Factor by grouping: x³ + 2x² + 3x + 6", options: ["(x²+3)(x+2)", "(x²+2)(x+3)", "(x-2)(x²+3)", "Not factorable"], correct: 0 },
+            { id: 37, type: 'mcq', q: "What is the degree of 5x⁴ - 2x³ + x - 7?", options: ["5", "4", "3", "1"], correct: 1 },
+            { id: 38, type: 'mcq', q: "Simplify: (4x² - 9) / (2x + 3)", options: ["2x + 3", "2x - 3", "x - 3", "4x - 3"], correct: 1 },
+            { id: 39, type: 'mcq', q: "Solve: x² + 16 = 0", options: ["±4", "±4i", "4", "-4"], correct: 1 },
+            { id: 40, type: 'mcq', q: "Convert to radical form: x^(3/4)", options: ["⁴√x³", "³√x⁴", "√(x^0.75)", "1/x^0.75"], correct: 0 },
+
+            // 41-50: Logs & Exponents
             { id: 41, type: 'text', q: "Solve |x - 4| > 2. (Format: x < a or x > b)", correct: "x < 2 or x > 6" },
+            { id: 42, type: 'mcq', q: "Evaluate log₂ 32", options: ["4", "5", "6", "16"], correct: 1 },
+            { id: 43, type: 'mcq', q: "Write in exponential form: log₃ 9 = 2", options: ["2³ = 9", "9² = 3", "3² = 9", "3⁹ = 2"], correct: 2 },
+            { id: 44, type: 'mcq', q: "Simplify: log x + log y", options: ["log(x+y)", "log(xy)", "log(x/y)", "log(x^y)"], correct: 1 },
+            { id: 45, type: 'mcq', q: "Solve: 2^x = 16", options: ["2", "3", "4", "8"], correct: 2 },
+            { id: 46, type: 'mcq', q: "What is ln e?", options: ["0", "1", "e", "undefined"], correct: 1 },
+            { id: 47, type: 'mcq', q: "Simplify: (e³)⁵", options: ["e⁸", "e¹⁵", "e³/⁵", "5e³"], correct: 1 },
+            { id: 48, type: 'mcq', q: "Solve log x = 3", options: ["3", "30", "100", "1000"], correct: 3 },
+            { id: 49, type: 'mcq', q: "Identify the inverse of y = 2x + 4", options: ["y = x/2 - 2", "y = 2x - 4", "y = x - 2", "y = (x-4)/2"], correct: 3 },
+            { id: 50, type: 'mcq', q: "What is the asymptote of y = 2^x?", options: ["x = 0", "y = 0", "y = 1", "No asymptote"], correct: 1 },
+
+            // 51-60: Potpourri
+            { id: 51, type: 'mcq', q: "Find the 10th term of the sequence: 2, 5, 8...", options: ["29", "30", "32", "27"], correct: 0 },
+            { id: 52, type: 'mcq', q: "What is 5! (5 factorial)?", options: ["20", "60", "120", "240"], correct: 2 },
+            { id: 53, type: 'mcq', q: "Simplify: √( -25 )", options: ["-5", "5", "-5i", "5i"], correct: 3 },
+            { id: 54, type: 'mcq', q: "Convert 180° to radians", options: ["π/2", "π", "2π", "3π/2"], correct: 1 },
+            { id: 55, type: 'mcq', q: "What is sin(90°)?", options: ["0", "0.5", "1", "-1"], correct: 2 },
+            { id: 56, type: 'mcq', q: "What is cos(0°)?", options: ["0", "0.5", "1", "-1"], correct: 2 },
+            { id: 57, type: 'mcq', q: "In a right triangle, tan θ = ?", options: ["Opp/Adj", "Opp/Hyp", "Adj/Hyp", "Hyp/Opp"], correct: 0 },
+            { id: 58, type: 'mcq', q: "Solve x² = 100", options: ["10", "-10", "±10", "±50"], correct: 2 },
+            { id: 59, type: 'mcq', q: "Simplify i⁴", options: ["i", "-i", "1", "-1"], correct: 2 },
             { id: 60, type: 'text', q: "Is every whole number an integer? (Yes/No)", correct: "Yes" }
         ];
 
@@ -225,6 +275,7 @@
                 if (!state.isPaused && !state.examSubmitted) {
                     state.timeRemaining--;
                     updateTimerDisplay();
+                    if(state.timeRemaining <= 0) processSubmit();
                 }
             }, 1000);
         }
@@ -258,11 +309,11 @@
             const modal = document.getElementById('modal-overlay');
             const content = document.getElementById('modal-content');
             content.innerHTML = `
-                <h3 class="text-2xl font-bold mb-4">Finish Exam?</h3>
-                <p class="mb-6 text-slate-600">You've answered <b>${answered}</b> out of 60 questions. Are you sure you want to end the exam?</p>
+                <h3 class="text-2xl font-bold mb-4 text-slate-800">Finish Exam?</h3>
+                <p class="mb-6 text-slate-600">You've answered <b>${answered}</b> out of 60 questions.</p>
                 <div class="flex gap-4">
-                    <button onclick="hideModal()" class="flex-1 py-3 border rounded-xl hover:bg-slate-50">Back</button>
-                    <button onclick="processSubmit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700">Submit</button>
+                    <button onclick="hideModal()" class="flex-1 py-3 border rounded-xl hover:bg-slate-50 font-bold">Back</button>
+                    <button onclick="processSubmit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700">Submit Now</button>
                 </div>
             `;
             modal.classList.remove('hidden');
@@ -274,13 +325,9 @@
             state.examSubmitted = true;
             clearInterval(timerInterval);
             hideModal();
-            
-            // Mark body as submitted to remove blur, but keep content locked
             document.body.classList.add('exam-submitted');
             
             let score = 0;
-            const totalPoints = 60;
-
             questions.forEach(q => {
                 const ans = state.answers[q.id];
                 if(q.type === 'mcq' || q.type === 'graph-mcq') {
@@ -290,55 +337,26 @@
                 }
             });
 
-            const percent = Math.round((score / totalPoints) * 100);
-            const timeSpent = 3600 - state.timeRemaining;
-            const minSpent = Math.floor(timeSpent / 60);
-            const secSpent = timeSpent % 60;
-
+            const percent = Math.round((score / 60) * 100);
             const overlay = document.getElementById('results-overlay');
             const resultsContent = document.getElementById('results-content');
             overlay.classList.remove('hidden');
             
             resultsContent.innerHTML = `
                 <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border-t-8 border-blue-600 max-w-2xl mx-auto">
-                    <h2 class="text-3xl font-black text-slate-800 mb-6">Scoreboard</h2>
-                    
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                        <div class="bg-blue-50 p-4 rounded-2xl text-center border border-blue-100">
+                    <h2 class="text-3xl font-black text-slate-800 mb-6">Results</h2>
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div class="bg-blue-50 p-6 rounded-2xl text-center border border-blue-100">
                             <p class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Final Score</p>
-                            <p class="text-3xl font-black text-blue-700">${score}<span class="text-blue-300 text-sm">/60</span></p>
+                            <p class="text-4xl font-black text-blue-700">${score}<span class="text-blue-300 text-lg">/60</span></p>
                         </div>
-                        <div class="bg-slate-50 p-4 rounded-2xl text-center border">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Percentage</p>
-                            <p class="text-3xl font-black text-slate-700">${percent}%</p>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-2xl text-center border col-span-2 md:col-span-1">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Time Used</p>
-                            <p class="text-xl font-bold text-slate-700 pt-1">${minSpent}m ${secSpent}s</p>
+                        <div class="bg-slate-50 p-6 rounded-2xl text-center border">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Grade</p>
+                            <p class="text-4xl font-black text-slate-700">${percent}%</p>
                         </div>
                     </div>
-
-                    <div class="space-y-3 mb-8 text-left">
-                        <div class="flex justify-between items-center p-3 border-b">
-                            <span class="text-slate-600">Total Questions</span>
-                            <span class="font-bold">60</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 border-b">
-                            <span class="text-slate-600">Answered</span>
-                            <span class="font-bold">${Object.keys(state.answers).length}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 border-b">
-                            <span class="text-slate-600">Correct Answers</span>
-                            <span class="font-bold text-green-600">${score}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 border-b">
-                            <span class="text-slate-600">Accuracy</span>
-                            <span class="font-bold text-blue-600">${Object.keys(state.answers).length > 0 ? Math.round((score/Object.keys(state.answers).length)*100) : 0}%</span>
-                        </div>
-                    </div>
-
                     <button onclick="window.location.reload()" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95">
-                        Try Again
+                        Retake Practice Test
                     </button>
                 </div>
             `;
@@ -356,12 +374,12 @@
             container.innerHTML = questions.map(q => {
                 let html = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 relative z-10">
                     <div class="flex items-start gap-4 mb-6">
-                        <span class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 text-sm">${q.id}</span>
-                        <p class="text-xl font-semibold text-slate-800 pt-0.5">${q.q}</p>
+                        <span class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 text-xs">${q.id}</span>
+                        <p class="text-lg font-semibold text-slate-800 pt-1">${q.q}</p>
                     </div>`;
 
                 if (q.type === 'mcq') {
-                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:pl-12">
                         ${q.options.map((opt, i) => `
                             <button onclick="saveAnswer(${q.id}, ${i})" class="text-left p-4 border-2 rounded-xl hover:border-blue-300 transition-all ${state.answers[q.id] === i ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-100'}">
                                 <span class="font-bold text-slate-400 mr-2">${['A','B','C','D'][i]}.</span> ${opt}
@@ -369,7 +387,7 @@
                         `).join('')}
                     </div>`;
                 } else if (q.type === 'graph-mcq') {
-                    html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 pl-12">
+                    html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:pl-12">
                         ${q.graphs.map((g, i) => `
                             <div onclick="saveAnswer(${q.id}, ${i})" class="graph-option-card border-2 rounded-xl p-2 ${state.answers[q.id] === i ? 'selected' : 'border-slate-100'}">
                                 <div class="w-full aspect-square mb-2">${generateGraphSVG(g.type, g.params)}</div>
@@ -378,8 +396,8 @@
                         `).join('')}
                     </div>`;
                 } else if (q.type === 'text') {
-                    html += `<div class="pl-12">
-                        <input type="text" onchange="saveAnswer(${q.id}, this.value)" class="w-full p-4 border-2 border-slate-100 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 outline-none" placeholder="Type answer..." value="${state.answers[q.id] || ''}">
+                    html += `<div class="md:pl-12">
+                        <input type="text" oninput="saveAnswer(${q.id}, this.value)" class="w-full p-4 border-2 border-slate-100 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-400 outline-none" placeholder="Enter answer..." value="${state.answers[q.id] || ''}">
                     </div>`;
                 }
                 html += `</div>`;
@@ -406,19 +424,15 @@
             isDrawing = true;
             ctx.beginPath();
             ctx.moveTo(e.clientX, e.clientY);
-            draw(e);
         }
 
         function draw(e) {
             if(!isDrawing) return;
             ctx.lineWidth = brushSize;
             ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
             ctx.strokeStyle = brushColor;
             ctx.lineTo(e.clientX, e.clientY);
             ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(e.clientX, e.clientY);
         }
 
         function endPosition() { isDrawing = false; }
@@ -430,14 +444,14 @@
                 document.body.classList.remove('drawing-active');
             } else {
                 document.body.classList.add('drawing-active');
-                brushSize = (tool === 'marker') ? 10 : 2;
+                brushSize = (tool === 'marker') ? 8 : 2;
             }
         }
 
         function setColor(color) {
             brushColor = color;
             document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
-            const map = {'#2563eb': 'blue', '#ef4444': 'red', '#22c55e': 'green', '#000000': 'black'};
+            const map = {'#2563eb': 'blue', '#ef4444': 'red', '#000000': 'black'};
             document.getElementById(`color-${map[color]}`).classList.add('active');
         }
 
