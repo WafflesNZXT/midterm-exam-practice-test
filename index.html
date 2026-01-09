@@ -20,8 +20,8 @@
             ring: 2px solid #2563eb;
         }
         .axis {
-            stroke: #94a3b8;
-            stroke-width: 1;
+            stroke: #475569;
+            stroke-width: 1.5;
         }
         .grid-line {
             stroke: #e2e8f0;
@@ -31,6 +31,7 @@
             stroke: #2563eb;
             stroke-width: 2.5;
             fill: none;
+            stroke-linecap: round;
         }
         canvas#scratch-pad {
             position: fixed;
@@ -42,12 +43,8 @@
             z-index: 40;
         }
         
-        /* Fixed Pencil Cursor Hotspot */
         .drawing-active canvas#scratch-pad {
             pointer-events: auto;
-            /* The '0 24' after the URL sets the hotspot to the bottom-left corner 
-               where the tip of the pencil path is located.
-            */
             cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTE3IDNsNCA0TDEwIDIwSDR2LTZMMTcgM3oiLz48cGF0aCBkPSJNMTUgNmw0IDQiLz48L3N2Zz4=") 0 24, auto;
         }
 
@@ -60,13 +57,17 @@
             ring: 2px offset 2px ring-slate-400;
             transform: scale(1.1);
         }
-        .exam-locked main, .exam-locked footer {
+        
+        /* Blur only applies when exam is locked AND not yet submitted (Paused state or Start state) */
+        body.exam-locked:not(.exam-submitted) main, 
+        body.exam-locked:not(.exam-submitted) footer {
             filter: blur(8px);
             pointer-events: none;
             user-select: none;
         }
+
         #results-overlay {
-            z-index: 200;
+            z-index: 200; /* Higher than header and scratchpad */
         }
     </style>
 </head>
@@ -76,7 +77,7 @@
     <div id="exam-gatekeeper" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-6 text-center z-[100]">
         <div class="bg-white p-8 rounded-2xl max-w-md shadow-2xl border-t-8 border-blue-600">
             <h2 class="text-3xl font-black text-slate-800 mb-4">Algebra 2 Mid-Term</h2>
-            <p class="text-slate-600 mb-8 leading-relaxed">Timed practice exam. Use the pencil tool for scratch work.</p>
+            <p class="text-slate-600 mb-8 leading-relaxed">60 Questions. 60 Minutes. Use the pencil tool for scratch work. Each question is worth 1 point.</p>
             <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg">
                 Begin Exam
             </button>
@@ -84,8 +85,8 @@
     </div>
 
     <!-- Results Container -->
-    <div id="results-overlay" class="fixed inset-0 bg-slate-900/90 hidden flex items-center justify-center p-4 overflow-y-auto">
-        <div id="results-content" class="w-full max-w-2xl"></div>
+    <div id="results-overlay" class="fixed inset-0 bg-slate-900/95 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div id="results-content" class="w-full max-w-2xl my-auto"></div>
     </div>
 
     <!-- Modal Overlay -->
@@ -147,32 +148,35 @@
         function generateGraphSVG(type, params) {
             const size = 100;
             const center = 50;
-            const scale = 5; 
+            const unit = 10; 
             let path = "";
+
+            const toPx = (x) => center + (x * unit);
+            const toPy = (y) => center - (y * unit);
 
             if (type === 'line') {
                 const { m, b } = params;
-                const x1 = -10, y1 = m * x1 + b;
-                const x2 = 10, y2 = m * x2 + b;
-                path = `M ${center + x1*scale} ${center - y1*scale} L ${center + x2*scale} ${center - y2*scale}`;
+                const x1 = -5, y1 = m * x1 + b;
+                const x2 = 5, y2 = m * x2 + b;
+                path = `M ${toPx(x1)} ${toPy(y1)} L ${toPx(x2)} ${toPy(y2)}`;
             } else if (type === 'parabola') {
                 const { h, k, a } = params;
-                for (let x = -10; x <= 10; x += 0.5) {
+                for (let x = -5; x <= 5; x += 0.1) {
                     const y = a * Math.pow(x - h, 2) + k;
-                    const px = center + x * scale;
-                    const py = center - y * scale;
-                    path += (x === -10 ? "M " : "L ") + `${px} ${py} `;
+                    if (y >= -6 && y <= 6) { 
+                        path += (path === "" ? "M " : "L ") + `${toPx(x)} ${toPy(y)} `;
+                    }
                 }
             } else if (type === 'abs') {
                 const { h, k, a } = params;
-                const x1 = -10, y1 = a * Math.abs(x1 - h) + k;
-                const x2 = h, y2 = k;
-                const x3 = 10, y3 = a * Math.abs(x3 - h) + k;
-                path = `M ${center + x1*scale} ${center - y1*scale} L ${center + x2*scale} ${center - y2*scale} L ${center + x3*scale} ${center - y3*scale}`;
+                const xLeft = -5, yLeft = a * Math.abs(xLeft - h) + k;
+                const xVertex = h, yVertex = k;
+                const xRight = 5, yRight = a * Math.abs(xRight - h) + k;
+                path = `M ${toPx(xLeft)} ${toPy(yLeft)} L ${toPx(xVertex)} ${toPy(yVertex)} L ${toPx(xRight)} ${toPy(yRight)}`;
             }
 
             return `
-                <svg viewBox="0 0 100 100" class="w-full h-full bg-slate-50 border rounded">
+                <svg viewBox="0 0 100 100" class="w-full h-full bg-white border rounded shadow-inner">
                     ${[...Array(11).keys()].map(i => `
                         <line x1="${i*10}" y1="0" x2="${i*10}" y2="100" class="grid-line" />
                         <line x1="0" y1="${i*10}" x2="100" y2="${i*10}" class="grid-line" />
@@ -190,9 +194,9 @@
             { id: 3, type: 'mcq', q: "Solve for x: |2x - 5| = 13", options: ["{9}", "{9, -4}", "{-9, 4}", "No Solution"], correct: 1 },
             { id: 4, type: 'mcq', q: "What is the value of i^26?", options: ["i", "-i", "1", "-1"], correct: 3 },
             { id: 5, type: 'mcq', q: "Find the product: (3 - 2i)(4 + 5i)", options: ["12 - 10i", "22 + 7i", "2 + 7i", "22 - 7i"], correct: 1 },
-            { id: 21, type: 'graph-mcq', q: "Which graph represents the linear function y = (2/3)x - 4?", graphs: [{ type: 'line', params: { m: 2/3, b: -4 } },{ type: 'line', params: { m: -2/3, b: -4 } },{ type: 'line', params: { m: 2/3, b: 4 } },{ type: 'line', params: { m: 3/2, b: -4 } }], correct: 0 },
-            { id: 22, type: 'graph-mcq', q: "Select the graph of f(x) = (x + 3)^2 - 2.", graphs: [{ type: 'parabola', params: { h: 3, k: -2, a: 1 } },{ type: 'parabola', params: { h: -3, k: -2, a: 1 } },{ type: 'parabola', params: { h: -3, k: 2, a: 1 } },{ type: 'parabola', params: { h: -3, k: -2, a: -1 } }], correct: 1 },
-            { id: 23, type: 'graph-mcq', q: "Identify the graph of y = |x - 2| + 1.", graphs: [{ type: 'abs', params: { h: 2, k: 1, a: 1 } },{ type: 'abs', params: { h: -2, k: 1, a: 1 } },{ type: 'abs', params: { h: 2, k: -1, a: 1 } },{ type: 'abs', params: { h: 2, k: 1, a: -1 } }], correct: 0 },
+            { id: 21, type: 'graph-mcq', q: "Which graph represents the linear function y = (2/3)x - 4?", graphs: [{ type: 'line', params: { m: 2/3, b: -4 } },{ type: 'line', params: { m: -2/3, b: -4 } },{ type: 'line', params: { m: 2/3, b: 4 } },{ type: 'line', params: { m: 1, b: 0 } }], correct: 0 },
+            { id: 22, type: 'graph-mcq', q: "Select the graph of f(x) = (x + 3)² - 2.", graphs: [{ type: 'parabola', params: { h: 3, k: -2, a: 1 } },{ type: 'parabola', params: { h: -3, k: -2, a: 1 } },{ type: 'parabola', params: { h: -3, k: 2, a: 1 } },{ type: 'parabola', params: { h: 0, k: 0, a: 1 } }], correct: 1 },
+            { id: 23, type: 'graph-mcq', q: "Identify the graph of y = |x - 2| + 1.", graphs: [{ type: 'abs', params: { h: 2, k: 1, a: 1 } },{ type: 'abs', params: { h: -2, k: 1, a: 1 } },{ type: 'abs', params: { h: 2, k: -1, a: 1 } },{ type: 'abs', params: { h: 0, k: 0, a: 1 } }], correct: 0 },
             { id: 41, type: 'text', q: "Solve |x - 4| > 2. (Format: x < a or x > b)", correct: "x < 2 or x > 6" },
             { id: 60, type: 'text', q: "Is every whole number an integer? (Yes/No)", correct: "Yes" }
         ];
@@ -255,10 +259,10 @@
             const content = document.getElementById('modal-content');
             content.innerHTML = `
                 <h3 class="text-2xl font-bold mb-4">Finish Exam?</h3>
-                <p class="mb-6">You've answered <b>${answered}</b> questions.</p>
+                <p class="mb-6 text-slate-600">You've answered <b>${answered}</b> out of 60 questions. Are you sure you want to end the exam?</p>
                 <div class="flex gap-4">
-                    <button onclick="hideModal()" class="flex-1 py-3 border rounded-xl">Back</button>
-                    <button onclick="processSubmit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Submit</button>
+                    <button onclick="hideModal()" class="flex-1 py-3 border rounded-xl hover:bg-slate-50">Back</button>
+                    <button onclick="processSubmit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700">Submit</button>
                 </div>
             `;
             modal.classList.remove('hidden');
@@ -270,10 +274,12 @@
             state.examSubmitted = true;
             clearInterval(timerInterval);
             hideModal();
-            document.body.classList.add('exam-locked');
+            
+            // Mark body as submitted to remove blur, but keep content locked
+            document.body.classList.add('exam-submitted');
             
             let score = 0;
-            let total = questions.length;
+            const totalPoints = 60;
 
             questions.forEach(q => {
                 const ans = state.answers[q.id];
@@ -284,14 +290,56 @@
                 }
             });
 
+            const percent = Math.round((score / totalPoints) * 100);
+            const timeSpent = 3600 - state.timeRemaining;
+            const minSpent = Math.floor(timeSpent / 60);
+            const secSpent = timeSpent % 60;
+
             const overlay = document.getElementById('results-overlay');
             const resultsContent = document.getElementById('results-content');
             overlay.classList.remove('hidden');
+            
             resultsContent.innerHTML = `
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border-t-8 border-blue-600">
-                    <h2 class="text-4xl font-black text-slate-800 mb-2">Results</h2>
-                    <p class="text-7xl font-black text-blue-600 my-8">${score}<span class="text-slate-300 text-3xl">/${total}</span></p>
-                    <button onclick="window.location.reload()" class="w-full bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg">Restart</button>
+                <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border-t-8 border-blue-600 max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-black text-slate-800 mb-6">Scoreboard</h2>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-blue-50 p-4 rounded-2xl text-center border border-blue-100">
+                            <p class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Final Score</p>
+                            <p class="text-3xl font-black text-blue-700">${score}<span class="text-blue-300 text-sm">/60</span></p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-2xl text-center border">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Percentage</p>
+                            <p class="text-3xl font-black text-slate-700">${percent}%</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-2xl text-center border col-span-2 md:col-span-1">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Time Used</p>
+                            <p class="text-xl font-bold text-slate-700 pt-1">${minSpent}m ${secSpent}s</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 mb-8 text-left">
+                        <div class="flex justify-between items-center p-3 border-b">
+                            <span class="text-slate-600">Total Questions</span>
+                            <span class="font-bold">60</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 border-b">
+                            <span class="text-slate-600">Answered</span>
+                            <span class="font-bold">${Object.keys(state.answers).length}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 border-b">
+                            <span class="text-slate-600">Correct Answers</span>
+                            <span class="font-bold text-green-600">${score}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 border-b">
+                            <span class="text-slate-600">Accuracy</span>
+                            <span class="font-bold text-blue-600">${Object.keys(state.answers).length > 0 ? Math.round((score/Object.keys(state.answers).length)*100) : 0}%</span>
+                        </div>
+                    </div>
+
+                    <button onclick="window.location.reload()" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95">
+                        Try Again
+                    </button>
                 </div>
             `;
         }
@@ -308,7 +356,7 @@
             container.innerHTML = questions.map(q => {
                 let html = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 relative z-10">
                     <div class="flex items-start gap-4 mb-6">
-                        <span class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">${q.id}</span>
+                        <span class="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 text-sm">${q.id}</span>
                         <p class="text-xl font-semibold text-slate-800 pt-0.5">${q.q}</p>
                     </div>`;
 
@@ -342,14 +390,12 @@
         function initDrawing() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            
             window.addEventListener('resize', () => {
                 const temp = ctx.getImageData(0,0,canvas.width,canvas.height);
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
                 ctx.putImageData(temp, 0, 0);
             });
-
             canvas.addEventListener('mousedown', startPosition);
             canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', endPosition);
@@ -363,28 +409,23 @@
             draw(e);
         }
 
-        function endPosition() {
-            isDrawing = false;
-            ctx.beginPath();
-        }
-
         function draw(e) {
             if(!isDrawing) return;
             ctx.lineWidth = brushSize;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.strokeStyle = brushColor;
-            
             ctx.lineTo(e.clientX, e.clientY);
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(e.clientX, e.clientY);
         }
 
+        function endPosition() { isDrawing = false; }
+
         function setTool(tool) {
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`btn-${tool}`).classList.add('active');
-            
             if(tool === 'cursor') {
                 document.body.classList.remove('drawing-active');
             } else {
@@ -400,9 +441,7 @@
             document.getElementById(`color-${map[color]}`).classList.add('active');
         }
 
-        function clearScratchpad() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-        }
+        function clearScratchpad() { ctx.clearRect(0,0,canvas.width,canvas.height); }
 
         window.onload = render;
     </script>
